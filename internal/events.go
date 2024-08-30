@@ -10,7 +10,7 @@ func NewEventManager() *EventManager {
 	return &EventManager{targets: sync.Map{}}
 }
 
-func (manager *EventManager) SendEvent(message Message) {
+func (manager *EventManager) SendNewMessageEvent(message Message) {
 	manager.targets.Range(func(target any, _ any) bool {
 		target.(chan Message) <- message
 		return true

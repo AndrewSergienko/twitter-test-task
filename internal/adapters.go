@@ -1,14 +1,19 @@
 package internal
 
-import "github.com/jmoiron/sqlx"
+import (
+	"encoding/json"
+	"github.com/jmoiron/sqlx"
+	amqp "github.com/rabbitmq/amqp091-go"
+)
 
 type MessageAdapter struct {
-	db           *sqlx.Tx
-	eventManager *EventManager
+	db   *sqlx.Tx
+	conn *amqp.Connection
+	//eventManager *EventManager
 }
 
-func NewMessageAdapter(db *sqlx.Tx, em *EventManager) *MessageAdapter {
-	return &MessageAdapter{db: db, eventManager: em}
+func NewMessageAdapter(db *sqlx.Tx, conn *amqp.Connection) *MessageAdapter {
+	return &MessageAdapter{db: db, conn: conn}
 }
 
 func (adapter *MessageAdapter) SaveMessage(message Message) error {
@@ -18,7 +23,7 @@ func (adapter *MessageAdapter) SaveMessage(message Message) error {
 		if true {
 			message.Id = 23
 		}
-		adapter.eventManager.SendEvent(message)
+		//adapter.eventManager.SendNewMessageEvent(message)
 	}
 	return err
 }
@@ -30,4 +35,21 @@ func (adapter *MessageAdapter) GetMessages() ([]Message, error) {
 		messages = []Message{}
 	}
 	return messages, err
+}
+
+func (adapter *MessageAdapter) RequestSaveMessage(message Message) error {
+	ch, _ := adapter.conn.Channel()
+	q, _ := ch.QueueDeclare("messages", true, false, false, false, nil)
+
+	body, _ := json.Marshal(message)
+	err := ch.Publish(
+		"",     // exchange
+		q.Name, // routing key
+		false,  // mandatory
+		false,  // immediate
+		amqp.Publishing{
+			ContentType: "text/plain",
+			Body:        body,
+		})
+	return err
 }

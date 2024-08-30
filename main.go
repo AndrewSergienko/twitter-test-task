@@ -6,6 +6,10 @@ import (
 )
 
 func main() {
-	app := internal.NewWebApp()
+	app, worker := internal.NewWebApp()
+
+	go worker.RunWorker()
+	go worker.RunObserver()
+
 	slog.Error(app.Listen(":3000").Error())
 }

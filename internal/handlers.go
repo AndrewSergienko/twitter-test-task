@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/valyala/fasthttp"
 	"log/slog"
 )
@@ -26,13 +27,15 @@ type MessageReader interface {
 type MessageHandlers struct {
 	eventManager *EventManager
 	db           *sqlx.DB
+	conn         *amqp.Connection
 }
 
 // func NewMessageHandlers(ms MessageSaver, mr MessageReader) *MessageHandlers {
-func NewMessageHandlers(db *sqlx.DB, em *EventManager) *MessageHandlers {
+func NewMessageHandlers(db *sqlx.DB, em *EventManager, conn *amqp.Connection) *MessageHandlers {
 	return &MessageHandlers{
 		db:           db,
 		eventManager: em,
+		conn:         conn,
 	}
 }
 
@@ -48,14 +51,14 @@ func (container MessageHandlers) CreateMessage(c *fiber.Ctx) error {
 	}
 
 	tx := container.db.MustBegin()
-	messageSaver := NewMessageAdapter(tx, container.eventManager)
+	messageSaver := NewMessageAdapter(tx, container.conn)
 
 	message := Message{
 		Nickname: requestData.Nickname,
 		Text:     requestData.Text,
 	}
 
-	if messageSaver.SaveMessage(message) != nil {
+	if messageSaver.RequestSaveMessage(message) != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Cannot save message"})
 	}
 	err := tx.Commit()
