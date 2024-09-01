@@ -19,7 +19,12 @@ func SetupQueues(conn *amqp.Connection) (*amqp.Queue, *amqp.Queue, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	defer ch.Close()
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		if err != nil {
+			return
+		}
+	}(ch)
 
 	qMessages, err := ch.QueueDeclare("messages", true, false, false, false, nil)
 	if err != nil {
@@ -40,7 +45,12 @@ func SetupQueues(conn *amqp.Connection) (*amqp.Queue, *amqp.Queue, error) {
 
 func FinalizeQueues(conn *amqp.Connection, qMessages *amqp.Queue, qEvents *amqp.Queue) {
 	ch, _ := conn.Channel()
-	defer ch.Close()
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		if err != nil {
+			return
+		}
+	}(ch)
 
 	_, _ = ch.QueueDelete(qMessages.Name, true, true, false)
 	_, _ = ch.QueueDelete(qEvents.Name, true, true, false)

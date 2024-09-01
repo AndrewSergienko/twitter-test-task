@@ -2,11 +2,13 @@ package internal
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"log/slog"
 	"strconv"
+	"time"
 )
 
 type MessageHandlers struct {
@@ -39,7 +41,10 @@ func (container MessageHandlers) CreateMessage(c *fiber.Ctx) error {
 		Text:     requestData.Text,
 	}
 
-	if messageAdapter.RequestSaveMessage(message) != nil {
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	if messageAdapter.RequestSaveMessage(ctx, message) != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Cannot create request"})
 	}
 
@@ -56,7 +61,15 @@ func (container MessageHandlers) GetMessages(c *fiber.Ctx) error {
 	}
 
 	messageReader, _ := container.ioc.NewMessageAdapter()
-	messages, _ := messageReader.GetMessages(from, limit)
+
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	messages, err := messageReader.GetMessages(ctx, from, limit)
+	if err != nil {
+		slog.Warn(fmt.Sprintf("Cannot get messages: %v", err))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Cannot get messages"})
+	}
 
 	if !live {
 		return c.JSON(messages)
@@ -75,7 +88,12 @@ func (container MessageHandlers) runMessageStreamer(c *fiber.Ctx, messages []Mes
 	stream := make(chan Message)
 	container.eventManager.AddTarget(stream)
 
+	closeNotify := c.Context().Done()
+
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		keepAliveTicker := time.NewTicker(10 * time.Second)
+		keepAliveMsg := ":keepalive\n"
+
 		defer container.eventManager.DeleteTarget(stream)
 		defer close(stream)
 
@@ -103,7 +121,17 @@ func (container MessageHandlers) runMessageStreamer(c *fiber.Ctx, messages []Mes
 				if w.Flush() != nil {
 					return
 				}
-
+			case <-keepAliveTicker.C:
+				if _, err := fmt.Fprintf(w, keepAliveMsg); err != nil {
+					slog.Info("Client disconnected. Stopped request")
+					return
+				}
+				if w.Flush() != nil {
+					slog.Info("Client disconnected. Stopped request")
+					return
+				}
+			case <-closeNotify:
+				return
 			}
 		}
 	})

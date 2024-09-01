@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
@@ -40,7 +41,7 @@ func (suite *HandlersTestSuite) SetupSuite() {
 	em := NewEventManager()
 	worker := NewWorker(conn, *mq, *eq, *ioc, em)
 
-	go worker.RunWorker()
+	go suite.NoError(worker.RunWorker(context.Background()))
 
 	suite.app = NewWebApp(*ioc, em)
 }
@@ -59,17 +60,10 @@ func (suite *HandlersTestSuite) TestCreateMessage() {
 	suite.Equal(201, resp.StatusCode)
 
 	ch, err := suite.conn.Channel()
-	defer ch.Close()
+	suite.NoError(err)
+	defer suite.NoError(ch.Close())
 
-	msgs, err := ch.Consume(
-		suite.eq.Name,
-		"",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
+	msgs, err := ch.Consume(suite.eq.Name, "", true, false, false, false, nil)
 	suite.NoError(err)
 
 	timeout := 5 * time.Second

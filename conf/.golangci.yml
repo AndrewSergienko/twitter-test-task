@@ -1,0 +1,26 @@
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - staticcheck     # go vet on steroids
+    - gosimple        # Suggest code simplifications
+    - unused          # Detect unused constants, variables, functions and types
+    - govet           # Reports suspicious constructs
+    - unparam         # Detect unused function parameters
+    - gosec           # Detect security issues
+    - gocyclo         # Detect cyclomatic complexity
+    - dupl            # Detect duplicate code fragments
+    - misspell        # Fix spelling errors
+    - typecheck       # Standard Go type checks
+    - ineffassign     # Detects unused variable assignments
+    - stylecheck      # Checks code style
+    - gochecknoinits  # Detects initializations in init() functions
+    - exportloopref   # Detects loop variables passed by reference to functions
+    - gocritic        # Detect potential issues in code
+    - revive          # General purpose linter
+    - nakedret        # Detect naked returns
+    - prealloc        # Suggests preallocating slices
+    - dogsled         # Detects unnecessary multiple variable assignments
+    - gocognit        # Detect cognitive complexity in functions
+    - lll             # Detect long lines

@@ -1,9 +1,12 @@
 package internal
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"log/slog"
+	"time"
 )
 
 type Worker struct {
@@ -18,7 +21,7 @@ func NewWorker(conn *amqp.Connection, mq amqp.Queue, eq amqp.Queue, ioc IoC, em 
 	return Worker{conn: conn, messagesQueue: mq, eventsQueue: eq, ioc: ioc, eventManager: em}
 }
 
-func (worker *Worker) RunWorker() error {
+func (worker *Worker) RunWorker(ctx context.Context) error {
 	ch, err := worker.conn.Channel()
 	if err != nil {
 		return err
@@ -28,17 +31,20 @@ func (worker *Worker) RunWorker() error {
 		return err
 	}
 
-	for d := range msgs {
+	processMessage := func(d amqp.Delivery) error {
 		var data *Message
 		if json.Unmarshal(d.Body, &data) != nil || data == nil {
 			if d.Nack(false, false) != nil {
-				continue
+				return nil
 			}
 		}
 
 		messageAdapter, tx := worker.ioc.NewMessageAdapter()
 
-		id, err := messageAdapter.SaveMessage(*data)
+		ctxDb, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		id, err := messageAdapter.SaveMessage(ctxDb, *data)
 		if err != nil {
 			slog.Warn("Cannot save message")
 			return err
@@ -54,47 +60,74 @@ func (worker *Worker) RunWorker() error {
 		body, err := json.Marshal(data)
 		if err != nil {
 			if d.Nack(false, true) != nil {
-				continue
+				return nil
 			}
 		}
+
+		ctxMQ, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
 		publishing := amqp.Publishing{
 			ContentType: "application/json",
 			Body:        body,
 		}
-		if ch.Publish("events", "", false, false, publishing) != nil {
+		if ch.PublishWithContext(ctxMQ, "events", "", false, false, publishing) != nil {
+			slog.Warn(fmt.Sprintf("Cannot publish message: %v", err))
 			if d.Nack(false, true) != nil {
-				continue
+				return nil
 			}
 		} else {
 			slog.Info("Message published")
 		}
+		return nil
 	}
 
-	defer func(ch *amqp.Channel) {
-		err := ch.Close()
-		if err != nil {
-			return
+	slog.Info("Start worker")
+	for {
+		select {
+		case d := <-msgs:
+			if err := processMessage(d); err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			slog.Info("Shutdown worker")
+			if err := ch.Close(); err != nil {
+				return err
+			}
 		}
-	}(ch)
-	return nil
+	}
 }
 
-func (worker *Worker) RunObserver() error {
+func (worker *Worker) RunObserver(ctx context.Context) error {
 	ch, err := worker.conn.Channel()
 	if err != nil {
 		return err
 	}
-	msgs, _ := ch.Consume(worker.eventsQueue.Name, "", true, false, false, false, nil)
-	for msg := range msgs {
-		slog.Info("New message received")
-		var message Message
-		err := json.Unmarshal(msg.Body, &message)
-		if err != nil {
-			continue
-		}
-
-		worker.eventManager.SendNewMessageEvent(message)
+	msgs, err := ch.Consume(worker.eventsQueue.Name, "", true, false, false, false, nil)
+	if err != nil {
+		return err
 	}
-	return nil
+
+	slog.Info("Start observer")
+	for {
+		select {
+		case msg := <-msgs:
+			slog.Info("New message received")
+			var message Message
+			err := json.Unmarshal(msg.Body, &message)
+			if err != nil {
+				slog.Warn("Cannot unmarshal event")
+				if msg.Nack(false, true) != nil {
+					continue
+				}
+			}
+
+			worker.eventManager.SendNewMessageEvent(message)
+		case <-ctx.Done():
+			slog.Info("Shutdown observer")
+			if err := ch.Close(); err != nil {
+				return err
+			}
+		}
+	}
 }
