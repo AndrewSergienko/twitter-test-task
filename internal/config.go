@@ -19,10 +19,29 @@ func SetupQueues(conn *amqp.Connection) (*amqp.Queue, *amqp.Queue, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	defer ch.Close()
 
-	qMessages, _ := ch.QueueDeclare("messages", true, false, false, false, nil)
-	qEvents, _ := ch.QueueDeclare("", true, false, false, false, nil)
-	_ = ch.ExchangeDeclare("events", "fanout", false, false, false, false, nil)
-	_ = ch.QueueBind(qEvents.Name, "", "events", false, nil)
+	qMessages, err := ch.QueueDeclare("messages", true, false, false, false, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	qEvents, err := ch.QueueDeclare("", true, false, false, false, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = ch.ExchangeDeclare("events", "fanout", false, false, false, false, nil); err != nil {
+		return nil, nil, err
+	}
+	if err = ch.QueueBind(qEvents.Name, "", "events", false, nil); err != nil {
+		return nil, nil, err
+	}
 	return &qMessages, &qEvents, nil
+}
+
+func FinalizeQueues(conn *amqp.Connection, qMessages *amqp.Queue, qEvents *amqp.Queue) {
+	ch, _ := conn.Channel()
+	defer ch.Close()
+
+	_, _ = ch.QueueDelete(qMessages.Name, true, true, false)
+	_, _ = ch.QueueDelete(qEvents.Name, true, true, false)
 }

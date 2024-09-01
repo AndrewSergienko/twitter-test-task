@@ -47,7 +47,7 @@ func (container MessageHandlers) CreateMessage(c *fiber.Ctx) error {
 }
 
 func (container MessageHandlers) GetMessages(c *fiber.Ctx) error {
-	live, _ := strconv.ParseBool(c.Query("live"))
+	live, _ := strconv.ParseBool(c.Query("live", "false"))
 	from, _ := strconv.Atoi(c.Query("from", "0"))
 	limit, _ := strconv.Atoi(c.Query("limit", "50"))
 
@@ -80,8 +80,12 @@ func (container MessageHandlers) runMessageStreamer(c *fiber.Ctx, messages []Mes
 		defer close(stream)
 
 		jsonData, _ := json.Marshal(messages)
-		_, _ = fmt.Fprintf(w, "data: %s\n\n", string(jsonData))
-		_ = w.Flush()
+		if _, err := fmt.Fprintf(w, "data: %s\n\n", string(jsonData)); err != nil {
+			return
+		}
+		if w.Flush() != nil {
+			return
+		}
 
 		for {
 			select {
@@ -93,12 +97,10 @@ func (container MessageHandlers) runMessageStreamer(c *fiber.Ctx, messages []Mes
 				jsonData, _ := json.Marshal([]Message{message})
 				strData := string(jsonData)
 
-				_, err := fmt.Fprintf(w, "data: %s\n\n", strData)
-				if err != nil {
+				if _, err := fmt.Fprintf(w, "data: %s\n\n", strData); err != nil {
 					return
 				}
-				err = w.Flush()
-				if err != nil {
+				if w.Flush() != nil {
 					return
 				}
 

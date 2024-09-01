@@ -3,6 +3,7 @@ package internal
 import (
 	"encoding/json"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"log/slog"
 )
 
 type Worker struct {
@@ -29,28 +30,44 @@ func (worker *Worker) RunWorker() error {
 
 	for d := range msgs {
 		var data *Message
-		err := json.Unmarshal(d.Body, &data)
-		if err != nil {
-			continue
+		if json.Unmarshal(d.Body, &data) != nil || data == nil {
+			if d.Nack(false, false) != nil {
+				continue
+			}
 		}
-		if data != nil {
-			messageAdapter, tx := worker.ioc.NewMessageAdapter()
 
-			id, err := messageAdapter.SaveMessage(*data)
-			if err != nil {
-				return err
-			}
-			if err = tx.Commit(); err != nil {
-				return err
-			}
+		messageAdapter, tx := worker.ioc.NewMessageAdapter()
 
-			data.Id = id
-			body, _ := json.Marshal(data)
-			publishing := amqp.Publishing{
-				ContentType: "application/json",
-				Body:        body,
+		id, err := messageAdapter.SaveMessage(*data)
+		if err != nil {
+			slog.Warn("Cannot save message")
+			return err
+		}
+		if err = tx.Commit(); err != nil {
+			slog.Warn("Cannot commit transaction")
+			return err
+		}
+		slog.Info("Message saved")
+
+		data.Id = id
+
+		body, err := json.Marshal(data)
+		if err != nil {
+			if d.Nack(false, true) != nil {
+				continue
 			}
-			err = ch.Publish("events", "", false, false, publishing)
+		}
+
+		publishing := amqp.Publishing{
+			ContentType: "application/json",
+			Body:        body,
+		}
+		if ch.Publish("events", "", false, false, publishing) != nil {
+			if d.Nack(false, true) != nil {
+				continue
+			}
+		} else {
+			slog.Info("Message published")
 		}
 	}
 
@@ -70,6 +87,7 @@ func (worker *Worker) RunObserver() error {
 	}
 	msgs, _ := ch.Consume(worker.eventsQueue.Name, "", true, false, false, false, nil)
 	for msg := range msgs {
+		slog.Info("New message received")
 		var message Message
 		err := json.Unmarshal(msg.Body, &message)
 		if err != nil {

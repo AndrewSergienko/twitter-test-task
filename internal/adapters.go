@@ -45,7 +45,7 @@ func (adapter *MessageAdapter) RequestSaveMessage(message Message) error {
 
 	body, _ := json.Marshal(message)
 	publishing := amqp.Publishing{
-		ContentType: "text/plain",
+		ContentType: "application/json",
 		Body:        body,
 	}
 	err := ch.Publish("", adapter.messageQueue.Name, false, false, publishing)
