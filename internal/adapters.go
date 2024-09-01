@@ -39,7 +39,7 @@ func (adapter *MessageAdapter) SaveMessage(ctx context.Context, message Message)
 
 func (adapter *MessageAdapter) GetMessages(ctx context.Context, from int, limit int) ([]Message, error) {
 	var messages []Message
-	stmt := "SELECT * FROM messages WHERE id >= :from ORDER BY id DESC LIMIT :limit"
+	stmt := "SELECT * FROM messages WHERE id >= $1 ORDER BY id DESC LIMIT $2"
 	err := adapter.db.SelectContext(ctx, &messages, stmt, from, limit)
 	if messages == nil {
 		messages = []Message{}

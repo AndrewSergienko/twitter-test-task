@@ -62,7 +62,7 @@ func (worker *Worker) RunWorker(ctx context.Context) error {
 		data.ID = id
 		body, err := json.Marshal(data)
 		if err != nil {
-			_ = d.Nack(false, true)
+			_ = d.Nack(false, false)
 			return nil
 		}
 
@@ -72,11 +72,10 @@ func (worker *Worker) RunWorker(ctx context.Context) error {
 		publishing := amqp.Publishing{ContentType: "application/json", Body: body}
 		if ch.PublishWithContext(ctxMQ, "events", "", false, false, publishing) != nil {
 			slog.Warn(fmt.Sprintf("Cannot publish message: %v", err))
-			_ = d.Nack(false, true)
+			_ = d.Nack(false, false)
 			return nil
-		} else {
-			slog.Info("Message published")
 		}
+		slog.Info("Message published")
 		return nil
 	}
 
@@ -108,12 +107,16 @@ func (worker *Worker) RunObserver(ctx context.Context) error {
 	for {
 		select {
 		case msg := <-msgs:
+			if msg.Body == nil {
+				continue
+			}
+
 			slog.Info("New message received")
 			var message Message
 			err := json.Unmarshal(msg.Body, &message)
 			if err != nil {
 				slog.Warn("Cannot unmarshal event")
-				if msg.Nack(false, true) != nil {
+				if err := msg.Nack(false, false); err != nil {
 					continue
 				}
 			}
@@ -124,6 +127,7 @@ func (worker *Worker) RunObserver(ctx context.Context) error {
 			if err := ch.Close(); err != nil {
 				return err
 			}
+			return nil
 		}
 	}
 }

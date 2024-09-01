@@ -16,7 +16,8 @@ jobs:
       COCKROACH_DATABASE: database
       DB_PORT: 26257
       DB_HOST: localhost
-      BROKER_URL: nats://localhost:4222
+      MQ_HOST: localhost
+      MQ_PORT: 5672
       CACHE_URL: memcached:11211
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
@@ -51,10 +52,10 @@ jobs:
 
       - name: Run database migrations
         run: |
-          goose -dir /migrations postgres "host=${DB_HOST} user=${COCKROACH_USER} password=${COCKROACH_PASSWORD} dbname=${COCKROACH_DATABASE}" up
+          goose -dir ./migrations postgres "host=${DB_HOST} user=${COCKROACH_USER} password=${COCKROACH_PASSWORD} dbname=${COCKROACH_DATABASE}" up
 
       - name: Run tests
-        run: go test -v ./internal/notifier/... -coverprofile=coverage.out -covermode=atomic
+        run: go test -v ./internal/... -coverprofile=coverage.out -covermode=atomic
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

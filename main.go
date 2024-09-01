@@ -9,13 +9,15 @@ import (
 )
 
 func main() {
-	db, err := internal.NewDB()
+	settingsDB := internal.NewDBSettings()
+	db, err := internal.NewDB(settingsDB)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Cannot connect to DB: %v", err))
 		panic("Cannot connect to DB")
 	}
 
-	conn, err := internal.NewMQConn()
+	settingsMQ := internal.NewMQSettings()
+	conn, err := internal.NewMQConn(settingsMQ)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Cannot connect to MQ: %v", err))
 		panic("Cannot connect to MQ")
