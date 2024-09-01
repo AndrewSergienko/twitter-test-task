@@ -18,7 +18,8 @@ func NewMessageAdapter(db *sqlx.Tx, conn *amqp.Connection, mq amqp.Queue) Messag
 }
 
 func (adapter *MessageAdapter) SaveMessage(ctx context.Context, message Message) (int, error) {
-	stmt, err := adapter.db.PrepareNamedContext(ctx, "INSERT INTO messages (nickname, text) VALUES (:nickname, :text) RETURNING id")
+	query := "INSERT INTO messages (nickname, text) VALUES (:nickname, :text) RETURNING id"
+	stmt, err := adapter.db.PrepareNamedContext(ctx, query)
 	if err != nil {
 		return 0, err
 	}
@@ -29,7 +30,7 @@ func (adapter *MessageAdapter) SaveMessage(ctx context.Context, message Message)
 	for rows.Next() {
 		var id int
 		if err := rows.Scan(&id); err == nil {
-			message.Id = id
+			message.ID = id
 			return id, err
 		}
 	}

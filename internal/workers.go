@@ -26,6 +26,12 @@ func (worker *Worker) RunWorker(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer func(ch *amqp.Channel) {
+		if err := ch.Close(); err != nil {
+			return
+		}
+	}(ch)
+
 	msgs, err := ch.Consume(worker.messagesQueue.Name, "", true, false, false, false, nil)
 	if err != nil {
 		return err
@@ -34,17 +40,15 @@ func (worker *Worker) RunWorker(ctx context.Context) error {
 	processMessage := func(d amqp.Delivery) error {
 		var data *Message
 		if json.Unmarshal(d.Body, &data) != nil || data == nil {
-			if d.Nack(false, false) != nil {
-				return nil
-			}
+			_ = d.Nack(false, false)
+			return nil
 		}
 
 		messageAdapter, tx := worker.ioc.NewMessageAdapter()
-
-		ctxDb, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctxDB, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		id, err := messageAdapter.SaveMessage(ctxDb, *data)
+		id, err := messageAdapter.SaveMessage(ctxDB, *data)
 		if err != nil {
 			slog.Warn("Cannot save message")
 			return err
@@ -55,27 +59,21 @@ func (worker *Worker) RunWorker(ctx context.Context) error {
 		}
 		slog.Info("Message saved")
 
-		data.Id = id
-
+		data.ID = id
 		body, err := json.Marshal(data)
 		if err != nil {
-			if d.Nack(false, true) != nil {
-				return nil
-			}
+			_ = d.Nack(false, true)
+			return nil
 		}
 
 		ctxMQ, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		publishing := amqp.Publishing{
-			ContentType: "application/json",
-			Body:        body,
-		}
+		publishing := amqp.Publishing{ContentType: "application/json", Body: body}
 		if ch.PublishWithContext(ctxMQ, "events", "", false, false, publishing) != nil {
 			slog.Warn(fmt.Sprintf("Cannot publish message: %v", err))
-			if d.Nack(false, true) != nil {
-				return nil
-			}
+			_ = d.Nack(false, true)
+			return nil
 		} else {
 			slog.Info("Message published")
 		}
@@ -91,9 +89,7 @@ func (worker *Worker) RunWorker(ctx context.Context) error {
 			}
 		case <-ctx.Done():
 			slog.Info("Shutdown worker")
-			if err := ch.Close(); err != nil {
-				return err
-			}
+			return nil
 		}
 	}
 }

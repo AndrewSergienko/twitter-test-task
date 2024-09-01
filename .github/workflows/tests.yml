@@ -18,27 +18,21 @@ jobs:
       DB_HOST: localhost
       BROKER_URL: nats://localhost:4222
       CACHE_URL: memcached:11211
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
 
     services:
       cockrocach:
-        image: cockroachdb/cockroach
+        image: timveil/cockroachdb-single-node:latest
         ports:
           - "26257:26257"
           - "8080:8080"
-        command: start-single-node --insecure
-        environment:
-          - COCKROACH_DATABASE=database
-          - COCKROACH_USER=user1
-          - COCKROACH_PASSWORD=password
 
       rabbit:
         image: rabbitmq
         ports:
           - "5672:5672"
           - "15672:15672"
-        environment:
-          RABBITMQ_DEFAULT_USER: user
-          RABBITMQ_DEFAULT_PASS: password
 
     steps:
       - uses: actions/checkout@v3

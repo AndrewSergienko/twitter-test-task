@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	_ "github.com/lib/pq"
 	"log/slog"
 	"twitter-test-task/internal"
 )
@@ -40,7 +41,7 @@ func main() {
 	go func() {
 		err := worker.RunWorker(ctx)
 		if err != nil {
-			slog.Error("Worker error: %v", err)
+			slog.Error(fmt.Sprintf("Worker error: %v", err))
 			errChan <- err
 		}
 	}()

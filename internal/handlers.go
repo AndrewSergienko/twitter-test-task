@@ -122,7 +122,7 @@ func (container MessageHandlers) runMessageStreamer(c *fiber.Ctx, messages []Mes
 					return
 				}
 			case <-keepAliveTicker.C:
-				if _, err := fmt.Fprintf(w, keepAliveMsg); err != nil {
+				if _, err := fmt.Fprint(w, keepAliveMsg); err != nil {
 					slog.Info("Client disconnected. Stopped request")
 					return
 				}
