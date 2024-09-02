@@ -1,27 +1,123 @@
 services:
-  crdb:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    ports:
+      - "3000:3000"
+    networks:
+      - database.network
+      - broker.network
+    env_file:
+      - conf/.env
+    depends_on:
+      cockroachdb1:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+
+  generate-certs:
     image: cockroachdb/cockroach
+    container_name: generate-certs
+    entrypoint: [ "/bin/bash", "-c" ]
+    command: |
+      "bash /database.sh"
+    volumes:
+      - ./certs:/certs
+      - ./scripts/database.sh:/database.sh
+    networks:
+      - database.network
+
+  cockroach-init:
+    image: cockroachdb/cockroach
+    container_name: cockroach-init
+    entrypoint: ["/cockroach/cockroach"]
+    command: ["init", "--certs-dir=/cockroach/certs", "--host=cockroachdb1:26257"]
+    networks:
+      - database.network
+    depends_on:
+      - cockroachdb1
+      - cockroachdb2
+      - cockroachdb3
+    volumes:
+      - ./certs:/cockroach/certs
+
+  cockroachdb1:
+    image: cockroachdb/cockroach
+    container_name: cockroachdb1
+    command: start --certs-dir=/cockroach/certs --advertise-addr=cockroachdb1 --join=cockroachdb1,cockroachdb2,cockroachdb3
+    networks:
+      - database.network
     ports:
       - "26257:26257"
       - "8080:8080"
-    command: start-single-node --insecure
-    environment:
-        - COCKROACH_DATABASE=database
-        - COCKROACH_USER=user1
-        - COCKROACH_PASSWORD=password
+    healthcheck:
+      test: [ "CMD", "cockroach", "sql", "--certs-dir=/cockroach/certs", "--host=localhost:26257", "--execute", "SELECT 1" ]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+    depends_on:
+      generate-certs:
+        condition: service_completed_successfully
+
     volumes:
-      - "./data/cockroach-data/crdb:/cockroach/cockroach-data"
+      - cockroach1.data:/cockroach/cockroach-data
+      - ./certs:/cockroach/certs
+
+  cockroachdb2:
+    image: cockroachdb/cockroach
+    container_name: cockroachdb2
+    command: start --certs-dir=/cockroach/certs --advertise-addr=cockroachdb2 --join=cockroachdb1,cockroachdb2,cockroachdb3
+    networks:
+      - database.network
+    ports:
+      - "26258:26257"
+      - "8081:8080"
+    depends_on:
+      generate-certs:
+        condition: service_completed_successfully
+    volumes:
+      - cockroach2.data:/cockroach/cockroach-data
+      - ./certs:/cockroach/certs
+
+  cockroachdb3:
+    image: cockroachdb/cockroach
+    container_name: cockroachdb3
+    command: start --certs-dir=/cockroach/certs --advertise-addr=cockroachdb3 --join=cockroachdb1,cockroachdb2,cockroachdb3
+    networks:
+      - database.network
+    ports:
+      - "26259:26257"
+      - "8082:8080"
+    depends_on:
+      generate-certs:
+        condition: service_completed_successfully
+    volumes:
+      - cockroach3.data:/cockroach/cockroach-data
+      - ./certs:/cockroach/certs
 
   rabbitmq:
-    image: rabbitmq:management
+    image: rabbitmq
+    container_name: rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
+    networks:
+      - broker.network
+    env_file:
+      - conf/.env
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq.data:/var/lib/rabbitmq
+
+networks:
+  database.network:
+    driver: bridge
+  broker.network:
+    driver: bridge
 
 volumes:
-  rabbitmq_data:
+  cockroach1.data:
+  cockroach2.data:
+  cockroach3.data:
+  rabbitmq.data:

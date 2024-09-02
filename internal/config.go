@@ -38,31 +38,26 @@ func FetchEnv(name string, strict bool) string { // nolint: all
 
 func NewDBSettings() DBSettings {
 	return DBSettings{
-		Host: FetchEnv("DB_HOST", true),
-		Port: FetchEnv("DB_PORT", true),
-		//User:     FetchEnv("DB_USER", true),
-		User: FetchEnv("COCKROACH_USER", true),
-		//Password: FetchEnv("DB_PASSWORD", true),
+		Host:     FetchEnv("DB_HOST", true),
+		Port:     FetchEnv("DB_PORT", true),
+		User:     FetchEnv("COCKROACH_USER", true),
 		Password: FetchEnv("COCKROACH_PASSWORD", true),
-		//Database: FetchEnv("DB_DATABASE", true),
 		Database: FetchEnv("COCKROACH_DATABASE", true),
 	}
 }
 
 func NewMQSettings() MQSettings {
 	return MQSettings{
-		Host: FetchEnv("MQ_HOST", true),
-		Port: FetchEnv("MQ_PORT", true),
-		//User:     FetchEnv("MQ_USER", true),
-		User: FetchEnv("RABBITMQ_DEFAULT_USER", true),
-		//Password: FetchEnv("MQ_PASSWORD", true),
+		Host:     FetchEnv("MQ_HOST", true),
+		Port:     FetchEnv("MQ_PORT", true),
+		User:     FetchEnv("RABBITMQ_DEFAULT_USER", true),
 		Password: FetchEnv("RABBITMQ_DEFAULT_PASS", true),
 	}
 }
 
 func NewDB(settings DBSettings) (*sqlx.DB, error) {
 	connStr := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
+		"postgresql://%s:%s@%s:%s/%s",
 		settings.User,
 		settings.Password,
 		settings.Host,

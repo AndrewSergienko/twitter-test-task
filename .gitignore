@@ -1,3 +1,5 @@
 data
-init.sh
+scripts/init.sh
 .idea
+certs
+conf/.env

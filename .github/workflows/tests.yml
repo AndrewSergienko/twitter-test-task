@@ -13,7 +13,7 @@ jobs:
     env:
       COCKROACH_USER: dbuser
       COCKROACH_PASSWORD: dbpassword
-      COCKROACH_DATABASE: database
+      COCKROACH_DATABASE: database.sh
       DB_PORT: 26257
       DB_HOST: localhost
       MQ_HOST: localhost
@@ -50,7 +50,7 @@ jobs:
         run: |
           go install github.com/pressly/goose/v3/cmd/goose@latest
 
-      - name: Run database migrations
+      - name: Run database.sh migrations
         run: |
           goose -dir ./migrations postgres "host=${DB_HOST} user=${COCKROACH_USER} password=${COCKROACH_PASSWORD} dbname=${COCKROACH_DATABASE}" up
 
