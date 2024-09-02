@@ -1,5 +1,4 @@
 data
-scripts/init.sh
 .idea
 certs/*.key
 certs/*.crt
