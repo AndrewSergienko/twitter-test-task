@@ -11,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      COCKROACH_USER: postgres
-      COCKROACH_PASSWORD: postgres
-      COCKROACH_DATABASE: database
+      COCKROACH_USER: user
+      COCKROACH_PASSWORD: password
+      COCKROACH_DATABASE: test_db
       DB_PORT: 5432
       DB_HOST: localhost
       MQ_HOST: localhost
       MQ_PORT: 5672
       CACHE_URL: memcached:11211
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
       TEST: true
 
     services:
