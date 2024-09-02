@@ -25,8 +25,6 @@ services:
     volumes:
       - ./certs:/certs
       - ./scripts/database.sh:/database.sh
-    environment:
-      COCKROACH_SKIP_KEY_PERMISSION_CHECK: true
     networks:
       - database.network
     profiles:
@@ -49,8 +47,6 @@ services:
     depends_on:
       generate-certs:
         condition: service_completed_successfully
-    environment:
-      COCKROACH_SKIP_KEY_PERMISSION_CHECK: true
     volumes:
       - cockroach1.data:/cockroach/cockroach-data
       - ./certs:/cockroach/certs
@@ -69,8 +65,6 @@ services:
     depends_on:
       generate-certs:
         condition: service_completed_successfully
-    environment:
-      COCKROACH_SKIP_KEY_PERMISSION_CHECK: true
     volumes:
       - cockroach2.data:/cockroach/cockroach-data
       - ./certs:/cockroach/certs
@@ -89,8 +83,6 @@ services:
     depends_on:
       generate-certs:
         condition: service_completed_successfully
-    environment:
-      COCKROACH_SKIP_KEY_PERMISSION_CHECK: true
     volumes:
       - cockroach3.data:/cockroach/cockroach-data
       - ./certs:/cockroach/certs
