@@ -52,11 +52,11 @@ jobs:
 
       - name: Run migrations
         env:
-          PGPASSWORD: postgres
+          PGPASSWORD: password
         run: |
           for file in migrations/*.sql; do
             echo "Running migration: $file"
-            psql -h localhost -p 5432 -U postgres -d database -f "$file"
+            psql -h localhost -p 5432 -U user -d test_db -f "$file"
           done
 
       - name: Run tests
