@@ -49,13 +49,14 @@ jobs:
       - name: Install dependencies
         run: go mod tidy
 
-      - name: Install Goose
+      - name: Run migrations
+        env:
+          PGPASSWORD: postgres
         run: |
-          go install github.com/pressly/goose/v3/cmd/goose@latest
-
-      - name: Run database migrations
-        run: |
-          goose -dir ./migrations postgres "host=${DB_HOST} port=${DB_PORT} user=${COCKROACH_USER} password=${COCKROACH_PASSWORD} dbname=${COCKROACH_DATABASE}" up
+          for file in migrations/*.sql; do
+            echo "Running migration: $file"
+            psql -h localhost -p 5432 -U postgres -d database -f "$file"
+          done
 
       - name: Run tests
         run: go test -v ./internal/... -coverprofile=coverage.out -covermode=atomic
