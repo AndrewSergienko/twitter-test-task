@@ -29,6 +29,7 @@ docker exec cockroachdb1 cockroach cert create-client $COCKROACH_USER --certs-di
 echo "Creating database..."
 docker exec cockroachdb1 cockroach sql --certs-dir=$CERTS_DIR --host=cockroachdb1:26257 --execute "CREATE DATABASE $COCKROACH_DATABASE;"
 docker exec cockroachdb1 cockroach sql --certs-dir=$CERTS_DIR --host=cockroachdb1:26257 --execute "GRANT ALL ON DATABASE $COCKROACH_DATABASE TO $COCKROACH_USER;"
+docker exec cockroachdb1 cockroach sql --certs-dir=$CERTS_DIR --host=cockroachdb1:26257 --execute "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $COCKROACH_USER;"
 
 echo "Database setup complete"
 docker exec cockroachdb1 cockroach sql --certs-dir=$CERTS_DIR --host=cockroachdb1:26257 --database=$COCKROACH_DATABASE --execute "$(cat /migrations/0001_init.sql)"
