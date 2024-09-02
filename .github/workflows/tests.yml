@@ -52,9 +52,9 @@ jobs:
         run: |
           go install github.com/pressly/goose/v3/cmd/goose@latest
 
-      - name: Run database.sh migrations
+      - name: Run database migrations
         run: |
-          goose -dir ./migrations postgres "host=${DB_HOST} user=${COCKROACH_USER} password=${COCKROACH_PASSWORD} dbname=${COCKROACH_DATABASE}" up
+          goose -dir ./migrations postgres "host=${DB_HOST} port=${DB_PORT} user=${COCKROACH_USER} password=${COCKROACH_PASSWORD} dbname=${COCKROACH_DATABASE}" up
 
       - name: Run tests
         run: go test -v ./internal/... -coverprofile=coverage.out -covermode=atomic
