@@ -32,7 +32,7 @@ docker exec cockroachdb1 cockroach sql --certs-dir=$CERTS_DIR --host=cockroachdb
 docker exec cockroachdb1 cockroach sql --certs-dir=$CERTS_DIR --host=cockroachdb1:26257 --execute "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $COCKROACH_USER;"
 
 echo "Database setup complete"
-docker exec cockroachdb1 cockroach sql --certs-dir=$CERTS_DIR --host=cockroachdb1:26257 --database=$COCKROACH_DATABASE --execute "$(cat /migrations/0001_init.sql)"
+docker exec cockroachdb1 cockroach sql --certs-dir=$CERTS_DIR --host=cockroachdb1:26257 --database=$COCKROACH_DATABASE --execute "$(cat ./migrations/0001_init.sql)"
 echo "Migration completed"
 
 docker compose -f ./docker-compose.yml --profile main up -d
