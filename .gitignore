@@ -1,5 +1,6 @@
 data
 scripts/init.sh
 .idea
-certs
-conf/.env
+certs/*.key
+certs/*.crt
+*/.env

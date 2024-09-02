@@ -1,1 +1,5 @@
 data
+.github
+scripts
+.gitignore
+.dockerignore
