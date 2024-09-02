@@ -13,7 +13,7 @@ jobs:
     env:
       COCKROACH_USER: dbuser
       COCKROACH_PASSWORD: dbpassword
-      COCKROACH_DATABASE: database.sh
+      COCKROACH_DATABASE: database
       DB_PORT: 26257
       DB_HOST: localhost
       MQ_HOST: localhost
@@ -25,6 +25,8 @@ jobs:
     services:
       cockrocach:
         image: timveil/cockroachdb-single-node:latest
+        env:
+          DATABASE_NAME: database
         ports:
           - "26257:26257"
           - "8080:8080"
