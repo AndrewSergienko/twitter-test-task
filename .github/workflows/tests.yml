@@ -1,0 +1,67 @@
+name: Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    env:
+      COCKROACH_USER: user
+      COCKROACH_PASSWORD: password
+      COCKROACH_DATABASE: test_db
+      DB_PORT: 5432
+      DB_HOST: localhost
+      MQ_HOST: localhost
+      MQ_PORT: 5672
+      CACHE_URL: memcached:11211
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      TEST: true
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: test_db
+        ports: [ '5432:5432' ]
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+      rabbit:
+        image: rabbitmq
+        ports:
+          - "5672:5672"
+          - "15672:15672"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.22.3'
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Install Goose
+        run: |
+          go install github.com/pressly/goose/v3/cmd/goose@latest
+
+      - name: Run database migrations
+        run: |
+          goose -dir ./migrations postgres "host=${DB_HOST} port=${DB_PORT} user=${COCKROACH_USER} password=${COCKROACH_PASSWORD} dbname=${COCKROACH_DATABASE}" up
+
+      - name: Run tests
+        run: go test -v ./internal/... -coverprofile=coverage.out -covermode=atomic
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

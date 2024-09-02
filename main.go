@@ -3,18 +3,21 @@ package main
 import (
 	"context"
 	"fmt"
+	_ "github.com/lib/pq"
 	"log/slog"
 	"twitter-test-task/internal"
 )
 
 func main() {
-	db, err := internal.NewDB()
+	settingsDB := internal.NewDBSettings()
+	db, err := internal.NewDB(settingsDB)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Cannot connect to DB: %v", err))
 		panic("Cannot connect to DB")
 	}
 
-	conn, err := internal.NewMQConn()
+	settingsMQ := internal.NewMQSettings()
+	conn, err := internal.NewMQConn(settingsMQ)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Cannot connect to MQ: %v", err))
 		panic("Cannot connect to MQ")
@@ -40,7 +43,7 @@ func main() {
 	go func() {
 		err := worker.RunWorker(ctx)
 		if err != nil {
-			slog.Error("Worker error: %v", err)
+			slog.Error(fmt.Sprintf("Worker error: %v", err))
 			errChan <- err
 		}
 	}()

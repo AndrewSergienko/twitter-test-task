@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/suite"
 	"io"
@@ -24,11 +25,13 @@ type HandlersTestSuite struct {
 }
 
 func (suite *HandlersTestSuite) SetupSuite() {
-	db, err := NewDB()
+	settingsDB := NewDBSettings()
+	db, err := NewDB(settingsDB)
 	suite.NoError(err)
 	suite.db = db
 
-	conn, err := NewMQConn()
+	settingsMQ := NewMQSettings()
+	conn, err := NewMQConn(settingsMQ)
 	suite.NoError(err)
 	suite.conn = conn
 
@@ -41,7 +44,7 @@ func (suite *HandlersTestSuite) SetupSuite() {
 	em := NewEventManager()
 	worker := NewWorker(conn, *mq, *eq, *ioc, em)
 
-	go suite.NoError(worker.RunWorker(context.Background()))
+	go func() { _ = worker.RunWorker(context.Background()) }()
 
 	suite.app = NewWebApp(*ioc, em)
 }
@@ -61,7 +64,9 @@ func (suite *HandlersTestSuite) TestCreateMessage() {
 
 	ch, err := suite.conn.Channel()
 	suite.NoError(err)
-	defer suite.NoError(ch.Close())
+	defer func(ch *amqp.Channel) {
+		_ = ch.Close()
+	}(ch)
 
 	msgs, err := ch.Consume(suite.eq.Name, "", true, false, false, false, nil)
 	suite.NoError(err)
