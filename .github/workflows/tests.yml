@@ -21,6 +21,7 @@ jobs:
       CACHE_URL: memcached:11211
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
+      TEST: true
 
     services:
       postgres:

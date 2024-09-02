@@ -6,6 +6,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"log/slog"
 	"os"
+	"strings"
 )
 
 type DBSettings struct {
@@ -71,6 +72,9 @@ func NewDB(settings DBSettings) (*sqlx.DB, error) {
 		clientCert,
 		clientKey,
 	)
+	if os.Getenv("TEST") == "true" {
+		connStr = strings.Split(connStr, "?")[0]
+	}
 	return sqlx.Connect("postgres", connStr)
 }
 
