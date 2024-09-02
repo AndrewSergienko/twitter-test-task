@@ -35,12 +35,10 @@ echo "Database setup complete"
 docker exec cockroachdb1 cockroach sql --certs-dir=$CERTS_DIR --host=cockroachdb1:26257 --database=$COCKROACH_DATABASE --execute "$(cat ./migrations/0001_init.sql)"
 echo "Migration completed"
 
-docker compose -f ./docker-compose.yml --profile main up -d
-
 if [ "$BOT_ENABLE" = "true" ]; then
   echo "Starting bot..."
 
   docker compose -f ./docker-compose.yml --profile bot up -d
 fi
 
-docker compose -f ./docker-compose.yml --profile main logs
+docker compose -f ./docker-compose.yml --profile main up
