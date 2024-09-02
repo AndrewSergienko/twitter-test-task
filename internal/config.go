@@ -59,7 +59,7 @@ func NewMQSettings() MQSettings {
 func NewDB(settings DBSettings) (*sqlx.DB, error) {
 	rootCert := "app/certs/ca.crt"
 	clientCert := fmt.Sprintf("app/certs/client.%s.crt", settings.User)
-	clientKey := fmt.Sprintf("app/certs/client.%s.crt", settings.User)
+	clientKey := fmt.Sprintf("app/certs/client.%s.key", settings.User)
 
 	connStr := fmt.Sprintf(
 		"postgresql://%s:%s@%s:%s/%s?sslmode=verify-full&sslrootcert=%s&sslcert=%s&sslkey=%s",
