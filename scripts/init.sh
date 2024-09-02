@@ -34,7 +34,9 @@ echo "Database setup complete"
 docker compose -f ./docker-compose.yml --profile main up -d
 
 if [ "$BOT_ENABLE" = "true" ]; then
-  echo "BOT_ENABLE встановлено на true. Запускаю бота..."
+  echo "Starting bot..."
 
   docker compose -f ./docker-compose.yml --profile bot up -d
 fi
+
+docker compose -f ./docker-compose.yml --profile main logs
