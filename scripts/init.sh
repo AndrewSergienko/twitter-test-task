@@ -31,4 +31,10 @@ docker exec cockroachdb1 cockroach sql --certs-dir=$CERTS_DIR --host=cockroachdb
 docker exec cockroachdb1 cockroach sql --certs-dir=$CERTS_DIR --host=cockroachdb1:26257 --execute "GRANT ALL ON DATABASE $COCKROACH_DATABASE TO $COCKROACH_USER;"
 
 echo "Database setup complete"
-docker compose -f ./docker-compose.yml --profile main up
+docker compose -f ./docker-compose.yml --profile main up -d
+
+if [ "$BOT_ENABLE" = "true" ]; then
+  echo "BOT_ENABLE встановлено на true. Запускаю бота..."
+
+  docker compose -f ./docker-compose.yml --profile bot up -d
+fi

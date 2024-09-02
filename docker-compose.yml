@@ -9,12 +9,25 @@ services:
     networks:
       - database.network
       - broker.network
+      - app.network
     env_file:
       - conf/.env
     volumes:
       - ./certs:/app/certs
     profiles:
       - main
+
+  bot:
+    build:
+      context: bot
+      dockerfile: Dockerfile
+    container_name: bot
+    env_file:
+      - conf/.env
+    networks:
+      - app.network
+    profiles:
+      - bot
 
   generate-certs:
     image: cockroachdb/cockroach
@@ -105,6 +118,8 @@ services:
       - setup
 
 networks:
+  app.network:
+    driver: bridge
   database.network:
     driver: bridge
   broker.network:
