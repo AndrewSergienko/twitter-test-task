@@ -28,7 +28,7 @@ def main():
     rate = os.environ.get("BOT_MESSAGES_PER_MINUTE", 60)
     url = os.environ.get("BOT_SERVICE_URL", "http://localhost:3000/api/messages")
 
-    interval = 60.0 / rate
+    interval = 60.0 / int(rate)
 
     while True:
         try:
