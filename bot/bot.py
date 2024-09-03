@@ -19,10 +19,16 @@ def send_message(url):
     print(f"Message sent. Status: {response.status_code}")
 
 def main():
+    enable = os.environ.get("BOT_ENABLE", "false")
+
+    if enable.lower() != "true":
+        print("Bot is disabled")
+        return
+
     rate = os.environ.get("BOT_MESSAGES_PER_MINUTE", 60)
     url = os.environ.get("BOT_SERVICE_URL", "http://localhost:3000/api/messages")
 
-    interval = 60.0 / rate
+    interval = 60.0 / int(rate)
 
     while True:
         try:
